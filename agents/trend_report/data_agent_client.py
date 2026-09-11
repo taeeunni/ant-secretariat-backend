@@ -24,7 +24,7 @@ class DataAgentClient:
     """Agent B 공통 함수 조회 어댑터."""
 
     def __init__(self, db_path: Optional[Path] = None) -> None:
-        from processing.storage.implementations import PineconeVectorDB, UpstageEmbeddingModel
+        from processing.storage.implementations import UpstageEmbeddingModel, get_vector_db
         from processing.storage.sqlite_db import SQLiteDB
 
         resolved_db_path = Path(
@@ -32,9 +32,11 @@ class DataAgentClient:
         )
         self.relational_db = SQLiteDB(str(resolved_db_path))
         self.embedding_model = UpstageEmbeddingModel(require_env("UPSTAGE_API_KEY"))
-        self.vector_db = PineconeVectorDB(
-            api_key=require_env("PINECONE_API_KEY"),
-            index_name=require_env("PINECONE_INDEX"),
+        # Pinecone 키/인덱스가 없으면 data-pipeline과 동일한 로컬 파일 경로를 바라보는
+        # LocalVectorDB로 자동 대체된다 (Debate agent와 동일한 get_vector_db() 팩토리).
+        self.vector_db = get_vector_db(
+            api_key=os.environ.get("PINECONE_API_KEY"),
+            index_name=os.environ.get("PINECONE_INDEX"),
         )
 
     def build_trend_context(

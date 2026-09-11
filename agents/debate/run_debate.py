@@ -21,7 +21,8 @@ from functions.agent_jobs import (
 from functions.get_user_context import get_user_context
 from processing.functions.get_agent_context import get_agent_context
 from processing.functions.get_available_data_status import get_available_data_status
-from processing.storage.implementations import UpstageEmbeddingModel, PineconeVectorDB
+from processing.interfaces import BaseVectorDB
+from processing.storage.implementations import UpstageEmbeddingModel, get_vector_db
 from processing.storage.sqlite_db import SQLiteDB
 
 
@@ -39,7 +40,7 @@ DEBATE_LLM_MODEL = os.getenv("DEBATE_LLM_MODEL", "solar-mini")
 # `import agents.debate.run_debate` 자체가 실패해버린다.
 _client: Optional[OpenAI] = None
 _embedding_model: Optional[UpstageEmbeddingModel] = None
-_vector_db: Optional[PineconeVectorDB] = None
+_vector_db: Optional[BaseVectorDB] = None
 _relational_db: Optional[SQLiteDB] = None
 
 
@@ -60,10 +61,12 @@ def _get_embedding_model() -> UpstageEmbeddingModel:
     return _embedding_model
 
 
-def _get_vector_db() -> PineconeVectorDB:
+def _get_vector_db() -> BaseVectorDB:
     global _vector_db
     if _vector_db is None:
-        _vector_db = PineconeVectorDB(
+        # Pinecone 키/인덱스가 없으면 data-pipeline과 동일한 로컬 파일 경로를 바라보는
+        # LocalVectorDB로 자동 대체된다 (get_vector_db() 팩토리, processing/storage/implementations.py).
+        _vector_db = get_vector_db(
             api_key=os.getenv("PINECONE_API_KEY"),
             index_name=os.getenv("PINECONE_INDEX"),
         )
